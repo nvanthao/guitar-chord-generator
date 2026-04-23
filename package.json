@@ -1,6 +1,7 @@
 {
   "name": "chord-generator",
   "scripts": {
-    "dev": "npx serve . -p 3000 --no-clipboard"
+    "dev": "npx serve . -p 3000 --no-clipboard",
+    "test": "node --test scripts/chord-add.test.js"
   }
 }

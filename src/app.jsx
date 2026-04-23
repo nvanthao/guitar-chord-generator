@@ -220,19 +220,27 @@ function ChordSheet({ chords, songTitle, meta, voicingState, onCycle }) {
 function App() {
   const [text, setText] = useState(() => localStorage.getItem('cg_text') || SAMPLE);
   const [title, setTitle] = useState(() => localStorage.getItem('cg_title') || 'Em Dạo Này');
-  const [meta, setMeta] = useState(() => localStorage.getItem('cg_meta') || 'Ngọt · demo chart');
+  const [meta, setMeta] = useState(() => localStorage.getItem('cg_meta') || 'Ngọt');
+  const [chordDataReady, setChordDataReady] = useState(() => !!window.CHORD_DATA_READY);
 
   useEffect(() => { localStorage.setItem('cg_text', text); }, [text]);
   useEffect(() => { localStorage.setItem('cg_title', title); }, [title]);
   useEffect(() => { localStorage.setItem('cg_meta', meta); }, [meta]);
 
+  useEffect(() => {
+    const handler = () => setChordDataReady(true);
+    window.addEventListener('chorddataready', handler);
+    return () => window.removeEventListener('chorddataready', handler);
+  }, []);
+
   const chords = useMemo(() => {
+    if (!chordDataReady) return [];
     const names = window.ChordData.parseChords(text);
     const unique = names.map((n) => window.ChordData.lookupChord(n));
     return unique.slice().sort((a, b) =>
       a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
     );
-  }, [text]);
+  }, [text, chordDataReady]);
 
   const [voicingState, setVoicingState] = useState(() => {
     try { return JSON.parse(localStorage.getItem('cg_voicings') || '{}'); } catch { return {}; }
