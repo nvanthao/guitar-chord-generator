@@ -56,16 +56,16 @@
 │  └────────────────────────────────────────────────────────┘ │
 │                                                               │
 │  ┌─────────────────────────────────────────────────────────┐ │
-│  │  External Libraries (via CDN)                           │ │
-│  │  - Babel standalone (JSX transpilation)                │ │
-│  │  - html-to-image (PNG export)                          │ │
-│  │  - Google Fonts (typography)                           │ │
+│  │  External Libraries (npm dependencies + CDN)            │ │
+│  │  - React 19 (bundled)                                   │ │
+│  │  - html-to-image (bundled)                              │ │
+│  │  - Google Fonts (via CDN)                               │ │
 │  └─────────────────────────────────────────────────────────┘ │
 │                                                               │
 └─────────────────────────────────────────────────────────────┘
 
 Data source at build time:
-chord-data.json → node scripts/chord-build.js → chord-data.js
+chord-data.json → Vite bundler → dist/chord-data bundled in app
 ```
 
 ---
@@ -182,23 +182,23 @@ ChordDiagram renders SVG
 
 ### 2. Chord Lookup Algorithm
 
-**File:** `window.ChordData.lookupChord()` (generated in chord-data.js)
+**File:** `src/chord-utils.js` (lookupChord function)
 
 ```
 lookupChord("C#m7")
           │
-          ├─ Check exact match: CHORDS["C#m7"] → Found ✓
+          ├─ Check exact match in bundled chords data → Found ✓
           │  return { name: "C#m7", voicings: [...], exact: true }
           │
           (if not found, try fallbacks:)
           │
           ├─ Try "min" → "m" substitution: "C#m" → Found ✓
-          │  return { name: "C#m7", voicings: CHORDS["C#m"], exact: false }
+          │  return { name: "C#m7", voicings: chords["C#m"], exact: false }
           │
           ├─ Try remove bass note: "C#m7/G" → "C#m7" → repeat
           │
           └─ Try root fallback: Extract root "C#" → Found ✓
-             return { name: "C#m7", voicings: CHORDS["C#"], exact: false }
+             return { name: "C#m7", voicings: chords["C#"], exact: false }
 
 Result displayed with warning if not exact match
 ```
@@ -472,24 +472,22 @@ User clicks Print or Save as PDF
 ### Build Phase (npm run build)
 
 ```
-scripts/chord-build.js executed
+Vite bundler starts
           ↓
-Read chord-data.json (source of truth)
+Processes src/app.jsx entry point
           ↓
-For each chord in JSON:
-  - Validate frets (length 6, values 0-24 or null)
-  - Validate fingers (length 6, values 0-4)
-  - Compute notes via noteAt(stringIdx, fret)
-  - Auto-derive label (open, barre Xfr, Xfr, etc.)
+Encounters import statement in src/chord-utils.js:
+  import chordDataRaw from '../chord-data.json'
           ↓
-Generate chord-data.js:
-  - HEADER (utility functions: noteAt, v, autoLabel)
-  - CHORDS object (all chord voicings)
-  - FOOTER (functions: parseChords, lookupChord, exports)
+Vite loads and processes chord-data.json
           ↓
-Write to chord-data.js
+All chord voicings bundled into JavaScript
           ↓
-console.log("✓ Built chord-data.js with 100+ chords")
+@vitejs/plugin-react transpiles JSX → JavaScript
+          ↓
+Assets optimized and written to dist/
+          ↓
+Output ready for deployment
 ```
 
 ### Deploy Phase (Git push to main)
@@ -501,9 +499,9 @@ GitHub webhook triggers Cloudflare Workers build
           ↓
 CF pulls latest code
           ↓
-CF runs: npm run build (generates chord-data.js)
+CF runs: npm run build (Vite builds to dist/)
           ↓
-CF serves project root as static assets
+CF serves dist/ as static assets
           ↓
 https://chord-generator.example.com is updated
           ↓
@@ -530,13 +528,11 @@ const chords = useMemo(() => {
 - **SVG for geometry:** Native, GPU-accelerated rendering
 - **Ref-based export:** Minimal re-renders during export
 
-### 3. CDN Caching
+### 3. Caching Strategy
 
-All external assets cached by CDN:
-- React 18.3.1 (cached globally)
-- Babel standalone (cached globally)
-- html-to-image (cached globally)
-- Google Fonts (cached by browser)
+- **Bundled assets:** React, html-to-image bundled in dist/ (cached by CF)
+- **External CDN:** Google Fonts (cached by browser)
+- **Static files:** index.html, JS, CSS (cached by CF with versioning)
 
 ### 4. State Batching
 
@@ -638,12 +634,14 @@ If chord database grows to 1000+ chords:
 
 | Choice | Why |
 |--------|-----|
-| **React 18 via CDN** | No build step, instant iteration, widely supported |
-| **Babel standalone** | Browser-side JSX transpilation, minimal runtime |
+| **Vite** | Fast dev server with HMR, optimized production builds, zero-config |
+| **React 19** | Modern UI framework, proven ecosystem |
+| **@vitejs/plugin-react** | Automatic JSX transpilation, no config needed |
 | **Inline styles** | No external CSS, self-contained components |
 | **SVG for diagrams** | Vector rendering, GPU accelerated, printable |
+| **JSON import** | Type-safe chord data bundling at build time |
 | **localStorage** | Simple persistence, no backend needed |
-| **Node.js scripts** | Lightweight build tooling, no dependencies |
+| **Node.js scripts** | Lightweight CLI tooling for chord management |
 | **Cloudflare Workers** | Zero-config hosting, Git-connected, auto-deploy |
 
 ---
