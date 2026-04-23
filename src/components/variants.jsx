@@ -1,6 +1,8 @@
 // Three design variations for the chord-sheet output.
-// Each takes { chords: Array<{name, shape}>, title?, meta? }
-// Renders a ready-to-export card. The parent wires up the DOM ref for html-to-image.
+// Each takes { chords, title?, meta?, nodeRef, voicingState, onCycle }
+
+import React from 'react';
+import ChordDiagram from './chord-diagram.jsx';
 
 function renderChord(c, i, variant, size, voicingState, onCycle) {
   const idx = voicingState[c.name] || 0;
@@ -205,7 +207,7 @@ function VariantMono({ chords, title, meta, nodeRef, voicingState, onCycle }) {
         )}
       </div>
 
-      {/* Diagrams inverted-colors: invert the style by wrapping */}
+      {/* Diagrams inverted-colors */}
       <div style={{
         display: 'grid',
         gridTemplateColumns: 'repeat(6, 1fr)',
@@ -231,6 +233,4 @@ function VariantMono({ chords, title, meta, nodeRef, voicingState, onCycle }) {
   );
 }
 
-window.VariantEditorial = VariantEditorial;
-window.VariantPaper = VariantPaper;
-window.VariantMono = VariantMono;
+export { VariantEditorial, VariantPaper, VariantMono };

@@ -1,7 +1,7 @@
-'use strict';
-// Guitar chord shape database — loaded from chord-data.json at runtime.
-// Exposes window.ChordData = { parseChords, lookupChord } after fetch resolves.
-// Dispatches 'chorddataready' on window when CHORDS data is available.
+// Guitar chord shape database — bundled from chord-data.json at build time.
+// Exports parseChords and lookupChord for use by the React app.
+
+import chordDataRaw from '../chord-data.json';
 
 const OPEN_NOTES = ['E', 'A', 'D', 'G', 'B', 'E'];
 const CHROMATIC = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
@@ -24,7 +24,22 @@ function autoLabel(shape) {
   return 'open';
 }
 
-function parseChords(text) {
+// Pre-process all chord voicings synchronously at module load time
+const CHORDS = {};
+Object.entries(chordDataRaw).forEach(([name, voicings]) => {
+  CHORDS[name] = voicings.map(({ frets, fingers }) => {
+    const shape = {
+      frets,
+      fingers: fingers || frets.map(() => 0),
+      notes: frets.map((f, i) => noteAt(i, f)),
+      label: null,
+    };
+    shape.label = autoLabel(shape);
+    return shape;
+  });
+});
+
+export function parseChords(text) {
   if (!text) return [];
   const re = /\[\s*([A-G][#b]?(?:m|maj|min|sus|dim|aug|add)?\d*(?:\/[A-G][#b]?)?)\s*\]/g;
   const seen = new Set();
@@ -36,9 +51,7 @@ function parseChords(text) {
   return list;
 }
 
-let CHORDS = {};
-
-function lookupChord(name) {
+export function lookupChord(name) {
   if (CHORDS[name]) return { name, voicings: CHORDS[name], exact: true };
   const variants = [name.replace('min', 'm'), name.replace(/\/.+$/, '')];
   for (const vr of variants) {
@@ -51,24 +64,3 @@ function lookupChord(name) {
   }
   return { name, voicings: null, exact: false };
 }
-
-window.ChordData = { parseChords, lookupChord };
-
-fetch('chord-data.json')
-  .then((r) => r.json())
-  .then((data) => {
-    Object.entries(data).forEach(([name, voicings]) => {
-      CHORDS[name] = voicings.map(({ frets, fingers }) => {
-        const shape = {
-          frets,
-          fingers: fingers || frets.map(() => 0),
-          notes: frets.map((f, i) => noteAt(i, f)),
-          label: null,
-        };
-        shape.label = autoLabel(shape);
-        return shape;
-      });
-    });
-    window.CHORD_DATA_READY = true;
-    window.dispatchEvent(new CustomEvent('chorddataready'));
-  });

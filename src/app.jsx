@@ -1,6 +1,10 @@
 // Main app: lyrics input + Editorial chord sheet.
 
-const { useState, useRef, useMemo, useEffect, useCallback } = React;
+import React, { useState, useRef, useMemo, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom/client';
+import * as htmlToImage from 'html-to-image';
+import { parseChords, lookupChord } from './chord-utils.js';
+import { VariantEditorial } from './components/variants.jsx';
 
 const SAMPLE = `[A] Vẫn những câu hỏi nhỏ  [Bm] Sau bao tháng chia ly
 [D] Anh vẫn thường thắc mắc [E] Khi anh không làm [A] gì.
@@ -152,10 +156,10 @@ function ChordSheet({ chords, songTitle, meta, voicingState, onCycle, isMobile, 
   const [copyState, setCopyState] = useState('idle');
 
   async function copyPNG() {
-    if (!ref.current || !window.htmlToImage) return;
+    if (!ref.current) return;
     setCopyState('working');
     try {
-      const blob = await window.htmlToImage.toBlob(ref.current, {
+      const blob = await htmlToImage.toBlob(ref.current, {
         pixelRatio: 2,
         cacheBust: true,
       });
@@ -168,7 +172,7 @@ function ChordSheet({ chords, songTitle, meta, voicingState, onCycle, isMobile, 
     } catch (e) {
       console.error(e);
       try {
-        const url = await window.htmlToImage.toPng(ref.current, { pixelRatio: 2 });
+        const url = await htmlToImage.toPng(ref.current, { pixelRatio: 2 });
         const a = document.createElement('a');
         a.href = url;
         a.download = `${(songTitle || 'chords').replace(/\s+/g, '-').toLowerCase()}.png`;
@@ -308,7 +312,6 @@ function App() {
   const [text, setText] = useState(() => localStorage.getItem('cg_text') || SAMPLE);
   const [title, setTitle] = useState(() => localStorage.getItem('cg_title') || 'Em Dạo Này');
   const [meta, setMeta] = useState(() => localStorage.getItem('cg_meta') || 'Ngọt');
-  const [chordDataReady, setChordDataReady] = useState(() => !!window.CHORD_DATA_READY);
   const [lyricsOpen, setLyricsOpen] = useState(false);
   const isMobile = useIsMobile();
 
@@ -316,24 +319,13 @@ function App() {
   useEffect(() => { localStorage.setItem('cg_title', title); }, [title]);
   useEffect(() => { localStorage.setItem('cg_meta', meta); }, [meta]);
 
-  useEffect(() => {
-    if (window.CHORD_DATA_READY) {
-      setChordDataReady(true);
-      return;
-    }
-    const handler = () => setChordDataReady(true);
-    window.addEventListener('chorddataready', handler);
-    return () => window.removeEventListener('chorddataready', handler);
-  }, []);
-
+  // Chord data is now bundled — synchronously available, no async loading state needed
   const chords = useMemo(() => {
-    if (!chordDataReady) return [];
-    const names = window.ChordData.parseChords(text);
-    const unique = names.map((n) => window.ChordData.lookupChord(n));
-    return unique.slice().sort((a, b) =>
-      a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' })
-    );
-  }, [text, chordDataReady]);
+    const names = parseChords(text);
+    return names
+      .map((n) => lookupChord(n))
+      .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [text]);
 
   const [voicingState, setVoicingState] = useState(() => {
     try { return JSON.parse(localStorage.getItem('cg_voicings') || '{}'); } catch { return {}; }

@@ -1,9 +1,11 @@
-// ChordDiagram.jsx — SVG fretboard diagram
+// ChordDiagram — SVG fretboard diagram
 // Props:
 //   name: string (chord name)
-//   shape: { frets, fingers, notes } — from chord-data.js
+//   shape: { frets, fingers, notes } — from chord-utils
 //   variant: 'editorial' | 'paper' | 'mono' (visual style)
 //   size: 'sm' | 'md' | 'lg'
+
+import React from 'react';
 
 function ChordDiagram({
   name, shape, variant = 'editorial', size = 'md',
@@ -108,7 +110,7 @@ function ChordDiagram({
         textTransform: 'lowercase',
         minHeight: dims.noteSize + 1,
       }}>
-        {voicingCount > 1 ? (voicingLabel || `voicing ${voicingIndex + 1}/${voicingCount}`) : (voicingLabel || '\u00A0')}
+        {voicingCount > 1 ? (voicingLabel || `voicing ${voicingIndex + 1}/${voicingCount}`) : (voicingLabel || ' ')}
       </div>
 
       <svg width={svgW} height={svgH} viewBox={`0 0 ${svgW} ${svgH}`} style={{ display: 'block', overflow: 'visible' }}>
@@ -276,6 +278,5 @@ const STYLE_TOKENS = {
   },
 };
 
-window.ChordDiagram = ChordDiagram;
-window.STYLE_TOKENS = STYLE_TOKENS;
-window.SIZE_TOKENS = SIZE_TOKENS;
+export { STYLE_TOKENS, SIZE_TOKENS };
+export default ChordDiagram;
