@@ -317,6 +317,10 @@ function App() {
   useEffect(() => { localStorage.setItem('cg_meta', meta); }, [meta]);
 
   useEffect(() => {
+    if (window.CHORD_DATA_READY) {
+      setChordDataReady(true);
+      return;
+    }
     const handler = () => setChordDataReady(true);
     window.addEventListener('chorddataready', handler);
     return () => window.removeEventListener('chorddataready', handler);
