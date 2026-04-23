@@ -2,6 +2,7 @@
   "name": "chord-generator",
   "scripts": {
     "dev": "npx serve . -p 3000 --no-clipboard",
+    "deploy": "wrangler deploy",
     "test": "node --test scripts/chord-add.test.js"
   }
 }
