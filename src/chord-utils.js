@@ -12,6 +12,12 @@ function noteAt(stringIdx, fret) {
   return CHROMATIC[(openIdx + fret) % 12];
 }
 
+const ENHARMONIC = { Db:'C#',Eb:'D#',Fb:'E',Gb:'F#',Ab:'G#',Bb:'A#',Cb:'B' };
+
+function sameNote(a, b) {
+  return a === b || ENHARMONIC[a] === b || ENHARMONIC[b] === a;
+}
+
 function autoLabel(shape) {
   const played = shape.frets.filter((f) => f !== null && f > 0);
   if (played.length === 0) return 'open';
@@ -39,6 +45,20 @@ Object.entries(chordDataRaw).forEach(([name, voicings]) => {
   });
 });
 
+function deriveSlashChord(name) {
+  const m = name.match(/^([A-G][#b]?(?:m|maj|min|sus|dim|aug|add)?\d*(?:[#b]\d+)?)\/([A-G][#b]?)$/);
+  if (!m) return null;
+  const [, root, bass] = m;
+  const rootVoicings = CHORDS[root];
+  if (!rootVoicings) return null;
+  const matched = rootVoicings.filter(({ frets }) => {
+    const lowestIdx = frets.findIndex((f) => f !== null && f >= 0);
+    if (lowestIdx === -1) return false;
+    return sameNote(noteAt(lowestIdx, frets[lowestIdx]), bass);
+  });
+  return { matched, all: rootVoicings };
+}
+
 export function parseChords(text) {
   if (!text) return [];
   const re = /\[\s*([A-G][#b]?(?:m|maj|min|sus|dim|aug|add)?\d*(?:\/[A-G][#b]?)?)\s*\]/g;
@@ -53,6 +73,11 @@ export function parseChords(text) {
 
 export function lookupChord(name) {
   if (CHORDS[name]) return { name, voicings: CHORDS[name], exact: true };
+  const derived = deriveSlashChord(name);
+  if (derived) {
+    const voicings = derived.matched.length > 0 ? derived.matched : derived.all;
+    return { name, voicings, exact: derived.matched.length > 0 };
+  }
   const variants = [name.replace('min', 'm'), name.replace(/\/.+$/, '')];
   for (const vr of variants) {
     if (CHORDS[vr]) return { name, voicings: CHORDS[vr], exact: false };
