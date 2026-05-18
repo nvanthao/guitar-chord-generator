@@ -4,7 +4,7 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "vite build && wrangler deploy",
+    "deploy": "wrangler pages deploy dist --project-name=guitar-chord-generator --commit-dirty=true",
     "test": "node --test scripts/chord-add.test.js"
   },
   "dependencies": {
@@ -14,6 +14,7 @@
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.0.1",
-    "vite": "^8.0.10"
+    "vite": "^8.0.10",
+    "wrangler": "^4.0.0"
   }
 }
